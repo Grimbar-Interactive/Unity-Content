@@ -12,7 +12,7 @@ namespace GI.UnityToolkit.Content.Editor
     /// Common surface <see cref="ContentDragDrop"/> and <see cref="ContentAssetOps.Move"/>
     /// need from a menu item, regardless of whether it represents an asset or a folder.
     /// </summary>
-    internal interface IContentMenuItem
+    public interface IContentMenuItem
     {
         string DiskPath { get; }
         bool IsFolder { get; }
@@ -126,7 +126,7 @@ namespace GI.UnityToolkit.Content.Editor
     /// <summary>
     /// Small shared drawing helpers.
     /// </summary>
-    internal static class ContentMenuGUI
+    public static class ContentMenuGUI
     {
         public static Texture FolderIcon => EditorIcons.UnityFolderIcon;
 

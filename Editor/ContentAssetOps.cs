@@ -12,7 +12,7 @@ namespace GI.UnityToolkit.Content.Editor
     /// <summary>
     /// Generic asset CRUD + folder management for Content types.
     /// </summary>
-    internal static class ContentAssetOps
+    public static class ContentAssetOps
     {
         public static string ParentFolder(string assetPath)
         {
