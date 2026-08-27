@@ -17,10 +17,14 @@ namespace GI.UnityToolkit.Content.Editor
     /// </summary>
     public class ContentEditorWindow : OdinMenuEditorWindow
     {
-        [SerializeField] private string _selectedTypeName;
+        [SerializeField] private string selectedTypeName;
 
         private ContentEditor _editor;
         private ContentTypeInfo _typeInfo;
+
+        /// <summary>Type picked in the dropdown this frame, applied on the next editor tick.
+        /// Non-null only for that one tick — see <see cref="DrawTypeDropdown"/>.</summary>
+        private ContentTypeInfo _pendingType;
         private Rect _renameButtonRect;
 
         [MenuItem("Grimbar Interactive/Content")]
@@ -127,6 +131,14 @@ namespace GI.UnityToolkit.Content.Editor
         protected override void OnImGUI()
         {
             wantsMouseMove = true;
+
+            // Both must be settled before a single control is emitted. IMGUI requires the Layout
+            // and Repaint passes to emit identical control counts, and the header's count depends
+            // on _editor — which Odin otherwise only assigns (via BuildMenuTree -> EnsureEditor)
+            // from inside base.OnImGUI(), i.e. after the header has already drawn.
+            EnsureEditor();
+            if (MenuTree == null) ForceMenuTreeRebuild();
+
             DrawHeader();
             base.OnImGUI();
         }
@@ -173,14 +185,23 @@ namespace GI.UnityToolkit.Content.Editor
                 labels[i] = string.IsNullOrEmpty(types[i].Category)
                     ? types[i].DisplayName
                     : $"{types[i].Category}/{types[i].DisplayName}";
-                if (types[i] == _typeInfo) currentIndex = i;
+                // Show the pending type while it waits for its tick, so the label doesn't snap
+                // back to the previous one for a frame.
+                if (types[i] == (_pendingType ?? _typeInfo)) currentIndex = i;
             }
 
             var newIndex = EditorGUILayout.Popup(currentIndex, labels, EditorStyles.toolbarPopup, GUILayout.Width(180f));
-            if (newIndex == currentIndex) return;
+            if (newIndex == currentIndex || _pendingType != null) return;
 
-            ActivateType(types[newIndex]);
-            ForceMenuTreeRebuild();
+            // Swapping _editor mid-frame changes the header's control count after this frame's
+            // layout is already committed, which throws on the following repaint. Defer applies it
+            // next tick, then rebuilds and repaints.
+            _pendingType = types[newIndex];
+            Defer(() =>
+            {
+                ActivateType(_pendingType);
+                _pendingType = null;
+            });
         }
 
         private void DrawDefaultButtons(ContentToolbar toolbar)
@@ -209,7 +230,12 @@ namespace GI.UnityToolkit.Content.Editor
                 renameClicked = SirenixEditorGUI.ToolbarButton("Rename");
             }
 
-            _renameButtonRect = GUILayoutUtility.GetLastRect();
+            // GetLastRect returns a dummy rect during Layout, which would leave the popup
+            // anchored at the window corner depending on which event fires the rename.
+            if (Event.current.type == EventType.Repaint)
+            {
+                _renameButtonRect = GUILayoutUtility.GetLastRect();
+            }
             if (renameClicked && toolbar.CanRename) toolbar.Rename(_renameButtonRect);
 
             bool deleteClicked;
@@ -285,9 +311,9 @@ namespace GI.UnityToolkit.Content.Editor
             }
 
             ContentTypeInfo info = null;
-            if (!string.IsNullOrEmpty(_selectedTypeName))
+            if (!string.IsNullOrEmpty(selectedTypeName))
             {
-                info = types.FirstOrDefault(t => t.ContentType.FullName == _selectedTypeName);
+                info = types.FirstOrDefault(t => t.ContentType.FullName == selectedTypeName);
             }
 
             info ??= types[0];
@@ -300,7 +326,7 @@ namespace GI.UnityToolkit.Content.Editor
         {
             _editor?.Dispose();
             _typeInfo = info;
-            _selectedTypeName = info?.ContentType.FullName;
+            selectedTypeName = info?.ContentType.FullName;
             _editor = info != null ? ContentTypeRegistry.CreateEditor(info) : null;
             if (_editor != null) _editor.Window = this;
         }

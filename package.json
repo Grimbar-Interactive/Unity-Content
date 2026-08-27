@@ -1,7 +1,7 @@
 {
     "name": "com.grimbarinteractive.unity-content",
     "displayName": "Unity Content",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "unity": "2022.3",
     "description": "Unity content editing in single window. Requires Odin Inspector.",
     "keywords": [ "content","editing", "game", "games", "unity" ],

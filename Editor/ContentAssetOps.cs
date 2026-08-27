@@ -44,7 +44,7 @@ namespace GI.UnityToolkit.Content.Editor
         private static void ApplyNameAndId(DataObject asset, ContentTypeInfo info, string assetName, bool includeId)
         {
             var so = new SerializedObject(asset);
-            var changed = WriteString(so, info.NameProperty, assetName, info, required: true);
+            var changed = WriteString(so, info.NameProperty, assetName, info, required: false);
 
             if (includeId && !string.IsNullOrEmpty(info.IdProperty))
             {
